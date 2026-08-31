@@ -1,0 +1,54 @@
+import logging
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import settings
+from app.core.database import init_db
+from app.api.v1.auth import router as auth_router
+from app.api.v1.clusters import router as clusters_router
+from app.api.v1.investigations import router as investigations_router
+from app.api.v1.remediation import router as remediation_router
+from app.api.v1.health import router as health_router
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Initializing ClusterMind Database Engine...")
+    await init_db()
+    yield
+    logger.info("ClusterMind Backend Service Shutdown.")
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    description=f"Production-grade AI Kubernetes Troubleshooting Agent backend created by {settings.DEVELOPER}.",
+    lifespan=lifespan
+)
+
+# CORS Setup
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Supported for flexible deployment across Vercel & local environments
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include Routers
+app.include_router(health_router)
+app.include_router(auth_router, prefix=settings.API_V1_STR)
+app.include_router(clusters_router, prefix=settings.API_V1_STR)
+app.include_router(investigations_router, prefix=settings.API_V1_STR)
+app.include_router(remediation_router, prefix=settings.API_V1_STR)
+
+@app.get("/")
+async def root():
+    return {
+        "message": "ClusterMind AI Kubernetes Troubleshooting Agent API Server",
+        "developer": settings.DEVELOPER,
+        "docs_url": "/docs",
+        "health_check": "/healthz"
+    }

@@ -1,0 +1,45 @@
+name: Deploy Backend to Azure Container Apps
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to Azure Container Registry (ACR)
+        run: |
+          az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG=${{ secrets.ACR_NAME }}.azurecr.io/clustermind-backend:${{ github.sha }}
+          docker build -t $IMAGE_TAG ./backend
+          docker push $IMAGE_TAG
+          docker tag $IMAGE_TAG ${{ secrets.ACR_NAME }}.azurecr.io/clustermind-backend:latest
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/clustermind-backend:latest
+
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: clustermind-backend-app
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          imageToDeploy: ${{ secrets.ACR_NAME }}.azurecr.io/clustermind-backend:${{ github.sha }}
+          environmentVariables: |
+            DATABASE_URL=${{ secrets.AZURE_POSTGRES_URL }}
+            GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+            GROQ_MODEL=llama-3.3-70b-versatile
+            AZURE_KEY_VAULT_URL=${{ secrets.AZURE_KEY_VAULT_URL }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
