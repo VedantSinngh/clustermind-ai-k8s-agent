@@ -36,6 +36,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Validate Vercel configuration
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          test -n "$VERCEL_TOKEN" || { echo "Missing VERCEL_TOKEN secret in GitHub repository settings"; exit 1; }
+          test -n "$VERCEL_ORG_ID" || { echo "Missing VERCEL_ORG_ID secret in GitHub repository settings"; exit 1; }
+          test -n "$VERCEL_PROJECT_ID" || { echo "Missing VERCEL_PROJECT_ID secret in GitHub repository settings"; exit 1; }
+
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
