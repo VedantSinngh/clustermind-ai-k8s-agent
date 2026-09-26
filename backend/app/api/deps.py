@@ -1,6 +1,6 @@
 import uuid
-from typing import AsyncGenerator
-from fastapi import Depends, HTTPException, status
+from typing import Optional
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -9,13 +9,22 @@ from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.domain import User, UserClusterAccess, ClusterRole
 
-security_bearer = HTTPBearer()
+security_bearer = HTTPBearer(auto_error=False)
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security_bearer),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
     db: AsyncSession = Depends(get_db)
 ) -> User:
-    token = credentials.credentials
+    token = request.cookies.get("clustermind_token")
+    if not token and credentials:
+        token = credentials.credentials
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
     payload = decode_access_token(token)
     if not payload:
         raise HTTPException(

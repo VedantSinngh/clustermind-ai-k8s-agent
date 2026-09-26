@@ -32,7 +32,7 @@ export default function RemediationModal({
     if (!isOperator) return;
     setLoading(true);
     setError(null);
-    try:
+    try {
       const res = await fetchApi("/remediations", {
         method: "POST",
         body: JSON.stringify({
@@ -51,10 +51,11 @@ export default function RemediationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div className="bg-surface border border-borderSubtle rounded-xl max-w-md w-full p-6 shadow-2xl relative">
         <button
           onClick={onClose}
+          aria-label="Close modal"
           className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 rounded-lg hover:bg-surfaceHover transition-colors"
         >
           <X className="w-5 h-5" />
@@ -65,7 +66,7 @@ export default function RemediationModal({
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-semibold text-white text-base">Human-in-the-Loop Confirmation</h3>
+            <h3 id="modal-title" className="font-semibold text-white text-base">Human-in-the-Loop Confirmation</h3>
             <p className="text-xs text-gray-400">Explicit approval required before cluster write</p>
           </div>
         </div>

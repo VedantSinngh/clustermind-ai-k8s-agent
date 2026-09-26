@@ -1,5 +1,5 @@
 # Build Stage
-FROM python:3.12-slim as builder
+FROM python:3.12-slim@sha256:d842b477b7f19b8830154817a10fdc7e4a1a0db61b2a95e076722d4f24d7751c as builder
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # Final Stage
-FROM python:3.12-slim
+FROM python:3.12-slim@sha256:d842b477b7f19b8830154817a10fdc7e4a1a0db61b2a95e076722d4f24d7751c
 
 WORKDIR /app
 

@@ -23,11 +23,14 @@ export default function HistoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const loadHistory = async () => {
+  const [page, setPage] = useState(0);
+  const limit = 20;
+
+  const loadHistory = async (pageNum: number = 0) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchApi("/investigations");
+      const data = await fetchApi(`/investigations?limit=${limit}&offset=${pageNum * limit}`);
       setHistory(data);
     } catch (err: any) {
       setError(err.message || "Failed to load investigation audit log.");
@@ -37,8 +40,8 @@ export default function HistoryPage() {
   };
 
   useEffect(() => {
-    loadHistory();
-  }, []);
+    loadHistory(page);
+  }, [page]);
 
   const filteredHistory = history.filter(
     (item) =>

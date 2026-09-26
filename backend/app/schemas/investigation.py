@@ -35,9 +35,15 @@ class InvestigationOut(BaseModel):
     class Config:
         from_attributes = True
 
+from typing import Optional, List, Any, Dict, Literal
+
 class RemediationRequest(BaseModel):
     investigation_id: UUID
-    command: str
+    action: Optional[Literal["RESTART_DEPLOYMENT", "DELETE_POD", "SCALE_DEPLOYMENT"]] = "RESTART_DEPLOYMENT"
+    target_resource: Optional[str] = None
+    namespace: Optional[str] = "default"
+    replicas: Optional[int] = None
+    command: Optional[str] = None
     confirm: bool = True
 
 class RemediationOut(BaseModel):

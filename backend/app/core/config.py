@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./clustermind.db"
 
     # Security & Auth
-    JWT_SECRET: str = "clustermind-production-jwt-secret-key-vedant-singh-2026"
+    JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
 
@@ -27,8 +27,9 @@ class Settings(BaseSettings):
     # Kubernetes Default Local Dev Config
     KUBECONFIG_PATH: Optional[str] = None
 
-    # Rate Limiting
+    # Rate Limiting & Cache
     RATE_LIMIT_INVESTIGATIONS_PER_HOUR: int = 20
+    REDIS_URL: str = "redis://redis:6379/0"
 
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "https://*.vercel.app", "http://localhost:8000"]

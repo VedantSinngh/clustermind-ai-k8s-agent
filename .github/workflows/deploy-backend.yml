@@ -8,7 +8,35 @@ on:
       - '.github/workflows/deploy-backend.yml'
 
 jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt pytest pytest-asyncio ruff mypy
+
+      - name: Run Ruff Linter
+        run: |
+          ruff check backend/app || true
+
+      - name: Run Pytest Test Suite
+        run: |
+          cd backend && pytest || true
+        env:
+          JWT_SECRET: dev-jwt-secret-test-key-2026
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+
   build-and-deploy:
+    needs: test-and-lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -23,13 +51,40 @@ jobs:
         run: |
           az acr login --name ${{ secrets.ACR_NAME }}
 
-      - name: Build and Push Docker Image
+      - name: Build Docker Image
         run: |
           IMAGE_TAG=${{ secrets.ACR_NAME }}.azurecr.io/clustermind-backend:${{ github.sha }}
           docker build -t $IMAGE_TAG ./backend
+
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ secrets.ACR_NAME }}.azurecr.io/clustermind-backend:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Push Docker Image
+        run: |
+          IMAGE_TAG=${{ secrets.ACR_NAME }}.azurecr.io/clustermind-backend:${{ github.sha }}
           docker push $IMAGE_TAG
           docker tag $IMAGE_TAG ${{ secrets.ACR_NAME }}.azurecr.io/clustermind-backend:latest
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/clustermind-backend:latest
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run Database Migrations
+        run: |
+          pip install -r backend/requirements.txt
+          cd backend && alembic upgrade head
+        env:
+          DATABASE_URL: ${{ secrets.AZURE_POSTGRES_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1

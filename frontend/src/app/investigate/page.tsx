@@ -75,20 +75,27 @@ export default function InvestigatePage() {
     setInvestigation(null);
     setRemediationLog(null);
 
-    // Simulate progress sequence for live UX
     setActiveStep("checking_pods");
-    setTimeout(() => setActiveStep("reading_logs"), 800);
-    setTimeout(() => setActiveStep("analyzing_events"), 1600);
-    setTimeout(() => setActiveStep("ai_reasoning"), 2400);
 
     try {
-      const data = await fetchApi("/investigations", {
+      let data = await fetchApi("/investigations", {
         method: "POST",
         body: JSON.stringify({
           cluster_id: selectedClusterId,
           namespace: namespace,
         }),
       });
+
+      // Poll background investigation until status changes from 'running'
+      while (data.status === "running") {
+        await new Promise((res) => setTimeout(res, 1000));
+        data = await fetchApi(`/investigations/${data.id}`);
+        if (data.progress_steps && data.progress_steps.length > 0) {
+          const lastStep = data.progress_steps[data.progress_steps.length - 1];
+          setActiveStep(lastStep.step);
+        }
+      }
+
       setActiveStep("completed");
       setInvestigation(data);
     } catch (err: any) {

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -28,7 +28,7 @@ async def register(user_in: UserRegister, db: AsyncSession = Depends(get_db)):
     return new_user
 
 @router.post("/login", response_model=Token)
-async def login(user_in: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(user_in: UserLogin, response: Response, db: AsyncSession = Depends(get_db)):
     stmt = select(User).where(User.email == user_in.email)
     res = await db.execute(stmt)
     user = res.scalars().first()
@@ -40,7 +40,20 @@ async def login(user_in: UserLogin, db: AsyncSession = Depends(get_db)):
         )
 
     access_token = create_access_token(subject=user.id)
+    response.set_cookie(
+        key="clustermind_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=60 * 60 * 24
+    )
     return Token(access_token=access_token, token_type="bearer")
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("clustermind_token")
+    return {"message": "Logged out successfully"}
 
 @router.get("/me", response_model=UserOut)
 async def get_me(current_user: User = Depends(get_current_user)):

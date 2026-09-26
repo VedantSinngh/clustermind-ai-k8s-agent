@@ -11,13 +11,14 @@ from app.api.v1.investigations import router as investigations_router
 from app.api.v1.remediation import router as remediation_router
 from app.api.v1.health import router as health_router
 
-logging.basicConfig(level=logging.INFO)
+from app.core.logging_config import setup_logging
+
+setup_logging()
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing ClusterMind Database Engine...")
-    await init_db()
+    logger.info("ClusterMind Backend Service Starting...")
     yield
     logger.info("ClusterMind Backend Service Shutdown.")
 
@@ -28,10 +29,17 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Prometheus Metrics Setup
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+    Instrumentator().instrument(app).expose(app)
+except Exception as e:
+    logger.warning(f"Prometheus instrumentator setup skipped: {e}")
+
 # CORS Setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Supported for flexible deployment across Vercel & local environments
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
